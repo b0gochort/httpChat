@@ -2,6 +2,7 @@ package model
 
 type NewRoomReq struct {
 	Message string `json:"message"`
+	Token   string `json:"token"`
 }
 
 type NewChatItem struct {
@@ -32,6 +33,7 @@ type NewChatRes struct {
 type NewMessageReq struct {
 	ChatID  int64  `json:"chat_id"`
 	Message string `json:"message"`
+	Token   string `json:"token"`
 }
 
 type MessageItem struct {

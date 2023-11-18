@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/b0gochort/httpChat/internal/model"
-
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
 	"resenje.org/logging"
 	"strconv"
@@ -25,9 +25,30 @@ func (h *Handler) NewChat(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	userId := int64(1)
+	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
+		return []byte("salt"), nil
+	})
+	if err != nil {
+		logging.Info(fmt.Sprintf("handler.jwt.Parse.%v", err))
+		ctx.Error("error cjwt.Parse", fasthttp.StatusInternalServerError)
+		return
+	}
+
+	claims, ok := token.Claims.(*jwt.StandardClaims)
+	if !ok {
+		logging.Info(fmt.Sprintf("handler.token.Claims.(*jwt.StandardClaims).%v", err))
+		ctx.Error("error token.Claims.(*jwt.StandardClaims)", fasthttp.StatusInternalServerError)
+		return
+	}
+
+	userId, err := strconv.Atoi(claims.Id)
+	if err != nil {
+		logging.Info("handler.strconv.Atoi: %v", err)
+		ctx.Error("unprocessable entity", fasthttp.StatusUnprocessableEntity)
+	}
+
 	userIp := string(ctx.Request.Header.Peek("x-forwarded-for"))
-	chat, err := h.services.ChatService.NewChat(userId, req.Message, userIp)
+	chat, err := h.services.ChatService.NewChat(int64(userId), req.Message, userIp)
 	if err != nil {
 		logging.Info(fmt.Sprintf("handler.NewChat.%v", err))
 		ctx.Error("error creating chat", fasthttp.StatusInternalServerError)
@@ -59,9 +80,29 @@ func (h *Handler) SendMessage(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	userId := int64(1)
-	sub := "user"
-	messageId, err := h.services.NewMessage(req.ChatID, userId, req.Message, sub)
+	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
+		return []byte("salt"), nil
+	})
+	if err != nil {
+		logging.Info(fmt.Sprintf("handler.jwt.Parse.%v", err))
+		ctx.Error("error cjwt.Parse", fasthttp.StatusInternalServerError)
+		return
+	}
+
+	claims, ok := token.Claims.(*jwt.StandardClaims)
+	if !ok {
+		logging.Info(fmt.Sprintf("handler.token.Claims.(*jwt.StandardClaims).%v", err))
+		ctx.Error("error token.Claims.(*jwt.StandardClaims)", fasthttp.StatusInternalServerError)
+		return
+	}
+
+	userId, err := strconv.Atoi(claims.Id)
+	if err != nil {
+		logging.Info("handler.strconv.Atoi: %v", err)
+		ctx.Error("unprocessable entity", fasthttp.StatusUnprocessableEntity)
+	}
+	sub := claims.Subject
+	messageId, err := h.services.NewMessage(req.ChatID, int64(userId), req.Message, sub)
 	if err != nil {
 		logging.Info(fmt.Sprintf("handler.SendMessage.NewMessage.%v", err))
 		ctx.Error("error creating message", fasthttp.StatusInternalServerError)
