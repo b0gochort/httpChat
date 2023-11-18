@@ -85,7 +85,7 @@ func (h *Handler) SendMessage(ctx *fasthttp.RequestCtx) {
 	})
 	if err != nil {
 		logging.Info(fmt.Sprintf("handler.jwt.Parse.%v", err))
-		ctx.Error("error cjwt.Parse", fasthttp.StatusInternalServerError)
+		ctx.Error("error jwt.Parse", fasthttp.StatusInternalServerError)
 		return
 	}
 
