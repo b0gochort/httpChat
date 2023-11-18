@@ -89,3 +89,27 @@ func (s *ChatServiceImpl) GetMessage(chatId int64) ([]model.Message, error) {
 
 	return res, nil
 }
+
+func (s *ChatServiceImpl) GetRooms() ([]model.NewChatRes, error) {
+	res := make([]model.NewChatRes, 0)
+
+	rooms, err := s.chatAPI.GetRooms()
+	if err != nil {
+		return nil, fmt.Errorf("service.chatAPI.GetRooms.%v", err)
+	}
+	for _, room := range rooms {
+		room := model.NewChatRes{
+			ID:            room.ID,
+			Time:          room.Time,
+			Message:       room.Message,
+			LastHostStaff: room.LastHostStaff,
+			UID:           room.UID,
+			IP:            room.IP,
+			Category:      room.Category,
+		}
+
+		res = append(res, room)
+	}
+
+	return res, nil
+}

@@ -91,14 +91,14 @@ func (a *ChatAPIImpl) GetMessage(chatId int64) ([]model.MessageItem, error) {
 	return response, nil
 }
 
-func (a *ChatAPIImpl) GetRooms() ([]model.MessageItem, error) {
+func (a *ChatAPIImpl) GetRooms() ([]model.NewChatItem, error) {
 	err := a.db.OpenNamespace("support_chat", reindexer.DefaultNamespaceOptions(), model.MessageItem{})
 	if err != nil {
 		return nil, fmt.Errorf("chatApi.GetMessage.OpenNamespace: %v", err)
 	}
 	elem := a.db.Query("support_chat").Sort("time", false)
 
-	var response []model.MessageItem
+	var response []model.NewChatItem
 
 	iter := elem.Exec()
 	if iter.Error() != nil {
@@ -106,13 +106,15 @@ func (a *ChatAPIImpl) GetRooms() ([]model.MessageItem, error) {
 	}
 
 	for iter.Next() {
-		elem := iter.Object().(*model.MessageItem)
-		response = append(response, model.MessageItem{
-			ID:     elem.ID,
-			ChatId: elem.ChatId,
-			Time:   elem.Time,
-			Host:   elem.Host,
-			Text:   elem.Text,
+		elem := iter.Object().(*model.NewChatItem)
+		response = append(response, model.NewChatItem{
+			ID:            elem.ID,
+			Time:          elem.Time,
+			Message:       elem.Message,
+			LastHostStaff: elem.LastHostStaff,
+			UID:           elem.UID,
+			IP:            elem.IP,
+			Category:      elem.Category,
 		})
 	}
 

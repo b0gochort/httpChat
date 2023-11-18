@@ -9,6 +9,7 @@ type ChatAPI interface {
 	CreateChat(room model.NewChatItem) (model.NewChatItem, error)
 	NewMessage(message model.MessageItem) (model.MessageItem, error)
 	GetMessage(chatId int64) ([]model.MessageItem, error)
+	GetRooms() ([]model.NewChatItem, error)
 }
 
 type ApiDB struct {

@@ -1,6 +1,6 @@
 package model
 
-type NewRoomReq struct {
+type NewChatReq struct {
 	Message string `json:"message"`
 	Token   string `json:"token"`
 }
@@ -59,4 +59,8 @@ type Message struct {
 	Time   int64    `json:"time"`
 	Host   HostType `json:"host"`
 	Text   string   `json:"text"`
+}
+
+type GetRoomsReq struct {
+	Token string `json:"token"`
 }
