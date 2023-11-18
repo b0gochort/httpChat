@@ -11,6 +11,7 @@ type NewChatItem struct {
 	LastHostStaff bool        `json:"last_host_staff" reindex:"last_host_staff,-"`
 	UID           int64       `json:"uid" reindex:"uid,hash"`
 	IP            string      `json:"ip" reindex:"ip,hash"`
+	Category      string      `json:"category" reindex:"category,hash"`
 }
 
 type MessageType struct {
@@ -25,6 +26,7 @@ type NewChatRes struct {
 	LastHostStaff bool        `json:"last_host_staff"`
 	UID           int64       `json:"uid"`
 	IP            string      `json:"ip"`
+	Category      string      `json:"category"`
 }
 
 type NewMessageReq struct {

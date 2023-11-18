@@ -41,6 +41,11 @@ func (a *ChatAPIImpl) NewMessage(message model.MessageItem) (model.MessageItem, 
 		return model.MessageItem{}, fmt.Errorf("chatApi.NewMessage.OpenNamespace: %v", err)
 	}
 
+	err = a.db.OpenNamespace("support_chat", reindexer.DefaultNamespaceOptions(), model.NewChatItem{})
+	if err != nil {
+		return model.MessageItem{}, fmt.Errorf("chatApi.NewMessage.OpenNamespace: %v", err)
+	}
+
 	ok, err := a.db.Insert("support_message", &message, "id=serial()")
 	if err != nil {
 		return model.MessageItem{}, fmt.Errorf("chatApi.NewMessage.db.Insert: %v", err)
@@ -48,6 +53,11 @@ func (a *ChatAPIImpl) NewMessage(message model.MessageItem) (model.MessageItem, 
 
 	if ok == 0 {
 		return model.MessageItem{}, fmt.Errorf("nil insert")
+	}
+
+	query := a.db.Query("support_chat").Where("id", reindexer.EQ, message.ChatId).Set("message.last_message", message.Text).Update()
+	if query.Error() != nil {
+		return model.MessageItem{}, fmt.Errorf("db.Query.Update: %v", query.Error())
 	}
 
 	return message, nil
@@ -59,6 +69,34 @@ func (a *ChatAPIImpl) GetMessage(chatId int64) ([]model.MessageItem, error) {
 		return nil, fmt.Errorf("chatApi.GetMessage.OpenNamespace: %v", err)
 	}
 	elem := a.db.Query("support_message").Sort("time", false).Where("chat_id", reindexer.EQ, chatId)
+
+	var response []model.MessageItem
+
+	iter := elem.Exec()
+	if iter.Error() != nil {
+		return nil, fmt.Errorf("chatApi.GetMessage.Exec: %v", iter.Error())
+	}
+
+	for iter.Next() {
+		elem := iter.Object().(*model.MessageItem)
+		response = append(response, model.MessageItem{
+			ID:     elem.ID,
+			ChatId: elem.ChatId,
+			Time:   elem.Time,
+			Host:   elem.Host,
+			Text:   elem.Text,
+		})
+	}
+
+	return response, nil
+}
+
+func (a *ChatAPIImpl) GetRooms() ([]model.MessageItem, error) {
+	err := a.db.OpenNamespace("support_chat", reindexer.DefaultNamespaceOptions(), model.MessageItem{})
+	if err != nil {
+		return nil, fmt.Errorf("chatApi.GetMessage.OpenNamespace: %v", err)
+	}
+	elem := a.db.Query("support_chat").Sort("time", false)
 
 	var response []model.MessageItem
 
