@@ -10,6 +10,7 @@ type ChatAPI interface {
 	NewMessage(message model.MessageItem) (model.MessageItem, error)
 	GetMessage(chatId int64) ([]model.MessageItem, error)
 	GetRooms() ([]model.NewChatItem, error)
+	GetFreeModer(category string) (int64, error)
 }
 
 type ApiDB struct {

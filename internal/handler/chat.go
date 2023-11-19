@@ -6,6 +6,7 @@ import (
 	"github.com/b0gochort/httpChat/internal/model"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/valyala/fasthttp"
+	"net"
 	"resenje.org/logging"
 	"strconv"
 	"time"
@@ -53,13 +54,22 @@ func (h *Handler) NewChat(ctx *fasthttp.RequestCtx) {
 	if err != nil {
 		logging.Info("handler.strconv.Atoi: %v", err)
 		ctx.Error("unprocessable entity", fasthttp.StatusInternalServerError)
+		return
 	}
 	time.Sleep(1 * time.Second)
 	//CHAT
 	timeRequest := float64(time.Now().Unix()) - float64(start)
+	categ := "delivery_period"
+	pr := int64(1)
 
+	mId, err := h.services.ChatService.GetModerId(categ)
+	if err != nil {
+		logging.Info(fmt.Sprintf("handler.NewChat.GetModerId: %v", err))
+		ctx.Error("GetModerId", fasthttp.StatusInternalServerError)
+		return
+	}
 	userIp := string(ctx.Request.Header.Peek("x-forwarded-for"))
-	chat, err := h.services.ChatService.NewChat(int64(userId), timeRequest, req.Message, userIp)
+	chat, err := h.services.ChatService.NewChat(int64(userId), mId, pr, timeRequest, req.Message, userIp, categ)
 	if err != nil {
 		logging.Info(fmt.Sprintf("handler.NewChat.%v", err))
 		ctx.Error("error creating chat", fasthttp.StatusInternalServerError)
@@ -222,50 +232,25 @@ func (h *Handler) GetRooms(ctx *fasthttp.RequestCtx) {
 	return
 }
 
-//func getCategory(text string) {
-//	var (
-//		f model.First_end
-//		s model.Second_end
-//		t model.Third_end
-//	)
-//
-//	c := &fasthttp.Client{
-//		Dial: func(addr string) (net.Conn, error) {
-//			return fasthttp.DialTimeout(addr, time.Second*10)
-//		},
-//		MaxConnsPerHost: 1,
-//	}
-//	code, body, err := c.Get(nil, fmt.Sprintf("127.0.0.1:5000/ai_first?text=\"%s\"", text))
-//	if err != nil {
-//		return
-//	}
-//	if code != 200 {
-//		return
-//	}
-//	if err := json.Unmarshal(body, &f); err != nil {
-//		return
-//	}
-//
-//	code, body, err = c.Get(nil, fmt.Sprintf("127.0.0.1:5000/ml_secondary?text=\"%s\"", text))
-//	if err != nil {
-//		return
-//	}
-//	if code != 200 {
-//		return
-//	}
-//	if err := json.Unmarshal(body, &f); err != nil {
-//		return
-//	}
-//
-//	code, body, err = c.Get(nil, fmt.Sprintf("127.0.0.1:5000/ml_two?text=\"%s\"", text))
-//	if err != nil {
-//		return
-//	}
-//	if code != 200 {
-//		return
-//	}
-//	if err := json.Unmarshal(body, &f); err != nil {
-//		return
-//	}
-//
-//}
+func getCategoryAndPriority(text string) model.NeuralService {
+	var res model.NeuralService
+
+	c := &fasthttp.Client{
+		Dial: func(addr string) (net.Conn, error) {
+			return fasthttp.DialTimeout(addr, time.Second*10)
+		},
+		MaxConnsPerHost: 1,
+	}
+	code, body, err := c.Get(nil, fmt.Sprintf("127.0.0.1:5000/getCategory?text=\"%s\"", text))
+	if err != nil {
+		return model.NeuralService{}
+	}
+	if code != 200 {
+		return model.NeuralService{}
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		return model.NeuralService{}
+	}
+
+	return res
+}

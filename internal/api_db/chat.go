@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/b0gochort/httpChat/internal/model"
 	"github.com/restream/reindexer/v3"
+	"math/rand"
 )
 
 type ChatAPIImpl struct {
@@ -120,4 +121,38 @@ func (a *ChatAPIImpl) GetRooms() ([]model.NewChatItem, error) {
 	}
 
 	return response, nil
+}
+
+func (a *ChatAPIImpl) GetFreeModer(category string) (int64, error) {
+	err := a.db.OpenNamespace("support_chat", reindexer.DefaultNamespaceOptions(), model.NewChatItem{})
+	if err != nil {
+		return 0, fmt.Errorf("chatApi.GetMessage.OpenNamespace: %v", err)
+	}
+
+	err = a.db.OpenNamespace("competent", reindexer.DefaultNamespaceOptions(), model.CompetentItem{})
+	if err != nil {
+		return 0, fmt.Errorf("chatApi.GetMessage.OpenNamespace: %v", err)
+	}
+
+	competentQuery := a.db.Query("competent").
+		WhereInt(category, reindexer.EQ, 1)
+
+	result := competentQuery.Exec()
+	if err != nil {
+		return 0, fmt.Errorf("chatApi.GetMessage.Exec().FetchAll(): %v", err)
+	}
+
+	var uids []int64
+
+	for result.Next() {
+		elem := result.Object().(*model.CompetentItem)
+		uids = append(uids, elem.UID)
+	}
+	randomIndex := rand.Intn(len(uids))
+	return uids[randomIndex], nil
+}
+
+type ModeratorChatCount struct {
+	MID       int64 `reindex:"mid"`
+	ChatCount int   `reindex:"chat_count"`
 }

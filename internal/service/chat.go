@@ -18,7 +18,7 @@ func NewChatService(chatAPI api_db.ChatAPI) *ChatServiceImpl {
 	}
 }
 
-func (s *ChatServiceImpl) NewChat(userId int64, reqTime float64, message, userIp string) (model.NewChatRes, error) {
+func (s *ChatServiceImpl) NewChat(userId, mId, priority int64, reqTime float64, message, userIp, category string) (model.NewChatRes, error) {
 	chat := model.NewChatItem{
 		Time: time.Now().Unix(),
 		Message: model.MessageType{
@@ -29,6 +29,9 @@ func (s *ChatServiceImpl) NewChat(userId int64, reqTime float64, message, userIp
 		UID:           userId,
 		IP:            userIp,
 		RequestTime:   reqTime,
+		MID:           mId,
+		Category:      category,
+		Priority:      priority,
 	}
 
 	chat, err := s.chatAPI.CreateChat(chat)
@@ -44,6 +47,10 @@ func (s *ChatServiceImpl) NewChat(userId int64, reqTime float64, message, userIp
 		UID:           chat.UID,
 		IP:            chat.IP,
 		RequestTime:   chat.RequestTime,
+		MID:           mId,
+		Category:      category,
+		Priority:      priority,
+		IsEnded:       chat.IsEnded,
 	}
 	return chatRes, nil
 }
@@ -108,10 +115,23 @@ func (s *ChatServiceImpl) GetRooms() ([]model.NewChatRes, error) {
 			UID:           room.UID,
 			IP:            room.IP,
 			Category:      room.Category,
+			RequestTime:   room.RequestTime,
+			MID:           room.MID,
+			Priority:      room.Priority,
+			IsEnded:       room.IsEnded,
 		}
 
 		res = append(res, room)
 	}
 
 	return res, nil
+}
+
+func (s *ChatServiceImpl) GetModerId(category string) (int64, error) {
+	mId, err := s.chatAPI.GetFreeModer(category)
+	if err != nil {
+		return 0, fmt.Errorf("service.GetModerId.%v", err)
+	}
+
+	return mId, nil
 }
