@@ -1,5 +1,9 @@
 package model
 
+import (
+	"github.com/golang-jwt/jwt/v5"
+)
+
 type NewChatReq struct {
 	Message string `json:"message"`
 	Token   string `json:"token"`
@@ -13,6 +17,7 @@ type NewChatItem struct {
 	UID           int64       `json:"uid" reindex:"uid,hash"`
 	IP            string      `json:"ip" reindex:"ip,hash"`
 	Category      string      `json:"category" reindex:"category,hash"`
+	RequestTime   float64     `json:"request_time" reindex:"request_time,tree"`
 }
 
 type MessageType struct {
@@ -28,6 +33,9 @@ type NewChatRes struct {
 	UID           int64       `json:"uid"`
 	IP            string      `json:"ip"`
 	Category      string      `json:"category"`
+	Name          string      `json:"name"`
+	Surname       string      `json:"surname"`
+	RequestTime   float64     `json:"request_time"`
 }
 
 type NewMessageReq struct {
@@ -61,6 +69,29 @@ type Message struct {
 	Text   string   `json:"text"`
 }
 
-type GetRoomsReq struct {
-	Token string `json:"token"`
+type JWTCustomClaims struct {
+	Name    string `json:"name"`
+	Surname string `json:"surname"`
+	jwt.RegisteredClaims
+}
+
+type GetInfo struct {
+	First_end
+	Second_end
+	Third_end
+}
+
+type First_end struct {
+	Class string  `json:"class"`
+	Score float64 `json:"score"`
+}
+
+type Second_end struct {
+	Priorate string  `json:"priorate"`
+	Score    float64 `json:"score"`
+}
+
+type Third_end struct {
+	Category string  `json:"category"`
+	Score    float64 `json:"score"`
 }

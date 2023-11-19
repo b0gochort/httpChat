@@ -18,7 +18,7 @@ func NewChatService(chatAPI api_db.ChatAPI) *ChatServiceImpl {
 	}
 }
 
-func (s *ChatServiceImpl) NewChat(userId int64, message, userIp string) (model.NewChatRes, error) {
+func (s *ChatServiceImpl) NewChat(userId int64, reqTime float64, message, userIp string) (model.NewChatRes, error) {
 	chat := model.NewChatItem{
 		Time: time.Now().Unix(),
 		Message: model.MessageType{
@@ -28,6 +28,7 @@ func (s *ChatServiceImpl) NewChat(userId int64, message, userIp string) (model.N
 		LastHostStaff: false,
 		UID:           userId,
 		IP:            userIp,
+		RequestTime:   reqTime,
 	}
 
 	chat, err := s.chatAPI.CreateChat(chat)
@@ -42,6 +43,7 @@ func (s *ChatServiceImpl) NewChat(userId int64, message, userIp string) (model.N
 		LastHostStaff: chat.LastHostStaff,
 		UID:           chat.UID,
 		IP:            chat.IP,
+		RequestTime:   chat.RequestTime,
 	}
 	return chatRes, nil
 }

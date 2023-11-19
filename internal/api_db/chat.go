@@ -92,7 +92,7 @@ func (a *ChatAPIImpl) GetMessage(chatId int64) ([]model.MessageItem, error) {
 }
 
 func (a *ChatAPIImpl) GetRooms() ([]model.NewChatItem, error) {
-	err := a.db.OpenNamespace("support_chat", reindexer.DefaultNamespaceOptions(), model.MessageItem{})
+	err := a.db.OpenNamespace("support_chat", reindexer.DefaultNamespaceOptions(), model.NewChatItem{})
 	if err != nil {
 		return nil, fmt.Errorf("chatApi.GetMessage.OpenNamespace: %v", err)
 	}
@@ -115,6 +115,7 @@ func (a *ChatAPIImpl) GetRooms() ([]model.NewChatItem, error) {
 			UID:           elem.UID,
 			IP:            elem.IP,
 			Category:      elem.Category,
+			RequestTime:   elem.RequestTime,
 		})
 	}
 

@@ -4,14 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/b0gochort/httpChat/internal/model"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/valyala/fasthttp"
 	"resenje.org/logging"
 	"strconv"
+	"time"
 )
 
 func (h *Handler) NewChat(ctx *fasthttp.RequestCtx) {
 	var req model.NewChatReq
+
+	start := time.Now().Unix()
 
 	if !ctx.IsPost() {
 		logging.Info("")
@@ -19,41 +22,51 @@ func (h *Handler) NewChat(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
+	cToken := ctx.Request.Header.Cookie("token")
+
 	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
 		logging.Info(fmt.Sprintf("handler.NewChat.Unmarshal: %v", err))
 		ctx.Error("unprocessable entity", fasthttp.StatusUnprocessableEntity)
 		return
 	}
 
-	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-		return []byte("salt"), nil
+	claims := jwt.MapClaims{}
+
+	_, err := jwt.ParseWithClaims(string(cToken), claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte("bot"), nil
 	})
+
 	if err != nil {
-		logging.Info(fmt.Sprintf("handler.jwt.Parse.%v", err))
-		ctx.Error("error cjwt.Parse", fasthttp.StatusInternalServerError)
+		logging.Info(fmt.Sprintf("handler.NewChat.ParseWithClaims: %v", err))
+		ctx.Error("ParseWithClaims", fasthttp.StatusInternalServerError)
 		return
 	}
 
-	claims, ok := token.Claims.(*jwt.StandardClaims)
-	if !ok {
-		logging.Info(fmt.Sprintf("handler.token.Claims.(*jwt.StandardClaims).%v", err))
-		ctx.Error("error token.Claims.(*jwt.StandardClaims)", fasthttp.StatusInternalServerError)
+	strUserId, err := claims.GetAudience()
+	if err != nil {
+		logging.Info(fmt.Sprintf("handler.NewChat.GetAudience: %v", err))
+		ctx.Error("GetAudience", fasthttp.StatusInternalServerError)
 		return
 	}
 
-	userId, err := strconv.Atoi(claims.Id)
+	userId, err := strconv.Atoi(strUserId[0])
 	if err != nil {
 		logging.Info("handler.strconv.Atoi: %v", err)
-		ctx.Error("unprocessable entity", fasthttp.StatusUnprocessableEntity)
+		ctx.Error("unprocessable entity", fasthttp.StatusInternalServerError)
 	}
+	time.Sleep(1 * time.Second)
+	//CHAT
+	timeRequest := float64(time.Now().Unix()) - float64(start)
 
 	userIp := string(ctx.Request.Header.Peek("x-forwarded-for"))
-	chat, err := h.services.ChatService.NewChat(int64(userId), req.Message, userIp)
+	chat, err := h.services.ChatService.NewChat(int64(userId), timeRequest, req.Message, userIp)
 	if err != nil {
 		logging.Info(fmt.Sprintf("handler.NewChat.%v", err))
 		ctx.Error("error creating chat", fasthttp.StatusInternalServerError)
 		return
 	}
+	chat.Name = claims["name"].(string)
+	chat.Surname = claims["surname"].(string)
 
 	res, err := json.Marshal(chat)
 	if err != nil {
@@ -89,14 +102,14 @@ func (h *Handler) SendMessage(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	claims, ok := token.Claims.(*jwt.StandardClaims)
+	claims, ok := token.Claims.(*model.JWTCustomClaims)
 	if !ok {
 		logging.Info(fmt.Sprintf("handler.token.Claims.(*jwt.StandardClaims).%v", err))
 		ctx.Error("error token.Claims.(*jwt.StandardClaims)", fasthttp.StatusInternalServerError)
 		return
 	}
 
-	userId, err := strconv.Atoi(claims.Id)
+	userId, err := strconv.Atoi(claims.RegisteredClaims.ID)
 	if err != nil {
 		logging.Info("handler.strconv.Atoi: %v", err)
 		ctx.Error("unprocessable entity", fasthttp.StatusUnprocessableEntity)
@@ -158,36 +171,33 @@ func (h *Handler) GetMessages(ctx *fasthttp.RequestCtx) {
 }
 
 func (h *Handler) GetRooms(ctx *fasthttp.RequestCtx) {
-	var req model.GetRoomsReq
-
 	if !ctx.IsGet() {
 		ctx.Error("handler NewChat check method: %v", fasthttp.StatusMethodNotAllowed)
 		return
 	}
 
-	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
-		logging.Info(fmt.Sprintf("handler.GetRooms.Unmarshal: %v", err))
-		ctx.Error("unprocessable entity", fasthttp.StatusUnprocessableEntity)
-		return
-	}
+	cToken := ctx.Request.Header.Cookie("token")
 
-	token, err := jwt.Parse(req.Token, func(token *jwt.Token) (interface{}, error) {
-		return []byte("salt"), nil
+	claims := jwt.MapClaims{}
+
+	_, err := jwt.ParseWithClaims(string(cToken), claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte("bot"), nil
 	})
+
 	if err != nil {
-		logging.Info(fmt.Sprintf("handler.jwt.Parse.%v", err))
-		ctx.Error("error jwt.Parse", fasthttp.StatusInternalServerError)
+		logging.Info(fmt.Sprintf("handler.NewChat.ParseWithClaims: %v", err))
+		ctx.Error("ParseWithClaims", fasthttp.StatusInternalServerError)
 		return
 	}
 
-	claims, ok := token.Claims.(*jwt.StandardClaims)
-	if !ok {
-		logging.Info(fmt.Sprintf("handler.token.Claims.(*jwt.StandardClaims).%v", err))
-		ctx.Error("error token.Claims.(*jwt.StandardClaims)", fasthttp.StatusInternalServerError)
+	sub, err := claims.GetSubject()
+	if err != nil {
+		logging.Info(fmt.Sprintf("handler.NewChat.GetSubject: %v", err))
+		ctx.Error("GetSubject", fasthttp.StatusInternalServerError)
 		return
 	}
 
-	if claims.Subject == "user" {
+	if sub == "user" {
 		ctx.Error("user cant take all rooms", fasthttp.StatusForbidden)
 		return
 	}
@@ -211,3 +221,51 @@ func (h *Handler) GetRooms(ctx *fasthttp.RequestCtx) {
 	ctx.Write(res)
 	return
 }
+
+//func getCategory(text string) {
+//	var (
+//		f model.First_end
+//		s model.Second_end
+//		t model.Third_end
+//	)
+//
+//	c := &fasthttp.Client{
+//		Dial: func(addr string) (net.Conn, error) {
+//			return fasthttp.DialTimeout(addr, time.Second*10)
+//		},
+//		MaxConnsPerHost: 1,
+//	}
+//	code, body, err := c.Get(nil, fmt.Sprintf("127.0.0.1:5000/ai_first?text=\"%s\"", text))
+//	if err != nil {
+//		return
+//	}
+//	if code != 200 {
+//		return
+//	}
+//	if err := json.Unmarshal(body, &f); err != nil {
+//		return
+//	}
+//
+//	code, body, err = c.Get(nil, fmt.Sprintf("127.0.0.1:5000/ml_secondary?text=\"%s\"", text))
+//	if err != nil {
+//		return
+//	}
+//	if code != 200 {
+//		return
+//	}
+//	if err := json.Unmarshal(body, &f); err != nil {
+//		return
+//	}
+//
+//	code, body, err = c.Get(nil, fmt.Sprintf("127.0.0.1:5000/ml_two?text=\"%s\"", text))
+//	if err != nil {
+//		return
+//	}
+//	if code != 200 {
+//		return
+//	}
+//	if err := json.Unmarshal(body, &f); err != nil {
+//		return
+//	}
+//
+//}

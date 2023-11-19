@@ -27,6 +27,8 @@ func (h *Handler) InitRoutes(ctx *fasthttp.RequestCtx) {
 		h.SendMessage(ctx)
 	case "/get-messages/chat-id":
 		h.GetMessages(ctx)
+	case "/getChats":
+		h.GetRooms(ctx)
 	}
 }
 
